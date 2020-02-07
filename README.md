@@ -44,7 +44,7 @@ Note: Always remember to add the comments related to your updates in this code.
 
 ## References
 
-It is pretty much impossible to implement this from the yolov3 paper alone. you can follow the official codes to understand the main functionality.
+ You can follow the official codes to understand the main functionality.
 
 - https://github.com/pjreddie/darknet
     - official yolov3 implementation
