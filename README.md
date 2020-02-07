@@ -13,6 +13,13 @@ This repo provides a clean implementation of YoloV3 and yolov3-tiny within openc
 ```bash
 pip install opencv-python
 ```
+## Downloads 
+ ```
+ #change directory to "ext" and run the following command to download weights.
+cd ext
+wget https://pjreddie.com/media/files/yolov3.weights
+
+```
 
 ### Detection
 
@@ -35,7 +42,7 @@ cv2_det_vid.py
           (default: 'ext/classes.names')
 ```
 ##  To do 
-extract the detected objects from the video files in the form of images and store it in seprate folder
+Extract the detected objects from the video files in the form of images and store it in seprate folder
 
 
 
