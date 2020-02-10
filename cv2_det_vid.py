@@ -82,7 +82,7 @@ while cv2.waitKey(1) < 0:
                 ''' If we find a fault label, we will crop the frame where we would normally put the real time label box.
                 We will then save the cropped image in a prespecified folder. I have noticed the box coordinates are
                 sometimes negative, so I make sure they don't go below 0.
-                In order to not save too pictures of the same fault, I have limited the problem to only save
+                In order to not save too many pictures of the same fault, I have limited the problem to only save
                 pictures every five detected frames. '''
 
                 if classes[class_id] == 'backpack':
