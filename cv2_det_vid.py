@@ -2,20 +2,26 @@ import cv2
 import utils
 import argparse
 import numpy as np
+import os
 import time
+
 ap = argparse.ArgumentParser()
 ap.add_argument('-c', '--config',
-                help = 'path to yolo config file', default='ext/yolov3.cfg')
+                help='path to yolo config file', default='ext/yolov3.cfg')
 ap.add_argument('-w', '--weights',
-                help = 'path to yolo pre-trained weights', default='ext/yolov3.weights')
+                help='path to yolo pre-trained weights', default='ext/yolov3.weights')
 ap.add_argument('-cl', '--classes',
-                help = 'path to text file containing class names',default='ext/classes.names')
+                help='path to text file containing class names', default='ext/classes.names')
 args = ap.parse_args()
 
 # Define a window to show the cam stream on it
-window_title= "Detector"
+window_title = "Detector"
 cv2.namedWindow(window_title, cv2.WINDOW_NORMAL)
 
+# Extraction variables
+number_faults = 0
+faults_between_saving = 5
+os.makedirs('./faults', exist_ok=True)
 
 # Load names classes
 classes = None
@@ -24,42 +30,42 @@ with open(args.classes, 'r') as f:
 print(classes)
 
 # Define network from configuration file and load the weights from the given weights file
-net = cv2.dnn.readNet(args.weights,args.config)
+net = cv2.dnn.readNet(args.weights, args.config)
 
 # Define video capture for default cam, uncomment this line if you to use camera #instead of video
-#cap = cv2.VideoCapture(0)
+# cap = cv2.VideoCapture(0)
 starting_time = time.time()
 frame_id = 0
-cap = cv2.VideoCapture("videos/crowd.mp4")
+cap = cv2.VideoCapture("videos/sidewalk.webm")
 length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-print( length )
+print(length)
 # cap.set(3, 1280)
 # cap.set(4, 720)
 while cv2.waitKey(1) < 0:
-    
+
     hasframe, image = cap.read()
     frame_id += 1
-    #image=cv2.resize(image, (620, 480))
+    # image=cv2.resize(image, (620, 480))
     # Extract blobs form images
-    blob = cv2.dnn.blobFromImage(image, 1.0/255.0, (320,320), [0,0,0], True, crop=False)
+    blob = cv2.dnn.blobFromImage(image, 1.0 / 255.0, (320, 320), [0, 0, 0], True, crop=False)
     Width = image.shape[1]
     Height = image.shape[0]
     net.setInput(blob)
-    
+
     outs = net.forward(utils.getOutputsNames(net))
-    
+
     class_ids = []
     confidences = []
     boxes = []
     conf_threshold = 0.5
     nms_threshold = 0.4
-    
+
     for out in outs:
-        #print(out.shape)
+        # print(out.shape)
         for detection in out:
-            
-        #in YOLO each detection is in the form of "[center_x center_y width height obj_score class_1_score class_2_score ..]"
-            scores = detection[5:]#classes scores starts from index 5
+
+            # in YOLO each detection is in the form of "[center_x center_y width height obj_score class_1_score class_2_score ..]"
+            scores = detection[5:]  # classes scores starts from index 5
             class_id = np.argmax(scores)
             confidence = scores[class_id]
             if confidence > 0.5:
@@ -72,10 +78,25 @@ while cv2.waitKey(1) < 0:
                 class_ids.append(class_id)
                 confidences.append(float(confidence))
                 boxes.append([x, y, w, h])
-    
+
+                ''' If we find a fault label, we will crop the frame where we would normally put the real time label box.
+                We will then save the cropped image in a prespecified folder. I have noticed the box coordinates are
+                sometimes negative, so I make sure they don't go below 0.
+                In order to not save too pictures of the same fault, I have limited the problem to only save
+                pictures every five detected frames. '''
+
+                if classes[class_id] == 'backpack':
+                    if number_faults % faults_between_saving == 0:
+                        number_faults += 1
+                        pic_path = ('faults/fault_' + str(int(number_faults / faults_between_saving)) + '.jpg')
+                        crop_image = image[max(0, int(y)): max(0, int(y + h)), max(0, int(x)): max(0, int(x + w))]
+                        cv2.imwrite(pic_path, crop_image)
+                    else:
+                        number_faults += 1
+
     # apply  non-maximum suppression algorithm on the bounding boxes
     indices = cv2.dnn.NMSBoxes(boxes, confidences, conf_threshold, nms_threshold)
-    
+
     for i in indices:
         i = i[0]
         box = boxes[i]
@@ -83,8 +104,8 @@ while cv2.waitKey(1) < 0:
         y = box[1]
         w = box[2]
         h = box[3]
-        utils.draw_pred(image, classes, class_ids[i], confidences[i], round(x), round(y), round(x+w), round(y+h))
-    #put frame/s
+        utils.draw_pred(image, classes, class_ids[i], confidences[i], round(x), round(y), round(x + w), round(y + h))
+    # put frame/s
     elapsed_time = time.time() - starting_time
     fps = frame_id / elapsed_time
     cv2.putText(image, "FPS: " + str(round(fps, 2)), (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 3)
